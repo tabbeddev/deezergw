@@ -326,7 +326,7 @@ class DeezerAPI:
         :rtype: str
         """
 
-        variables = {
+        variables: Dict[str, Dict[str, Union[str, bool]]] = {
             "input": {
                 "playlistId": playlist_id,
             }
@@ -353,7 +353,7 @@ class DeezerAPI:
 
         return data
     
-    def add_tracks_to_playlist(self, playlist_id: str, song_ids:ArrayLike[str],offset: int = -1) -> None:
+    def add_tracks_to_playlist(self, playlist_id: str, song_ids: Iterable[str],offset: int = -1) -> None:
         """
         Add songs to a playlist.
 
@@ -376,7 +376,7 @@ class DeezerAPI:
         
         self._get_api(METHOD_ADD_PLAYLIST_TRACK, json_data)
 
-    def remove_tracks_from_playlist(self, playlist_id: str,song_ids: ArrayLike[str]) -> None:
+    def remove_tracks_from_playlist(self, playlist_id: str,song_ids: Iterable[str]) -> None:
         """
         Remove songs from a playlist.
 
