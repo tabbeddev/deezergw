@@ -23,6 +23,9 @@ METHOD_REMOVE_FAVORITE_ARTIST = "artist.deleteFavorite"
 METHOD_GET_PLAYLIST_DATA = "deezer.pagePlaylist"
 METHOD_ADD_FAVORITE_PLAYLIST = "playlist.addFavorite"
 METHOD_REMOVE_FAVORITE_PLAYLIST = "playlist.deleteFavorite"
+METHOD_DELETE_PLAYLIST = "playlist.delete"
+METHOD_ADD_PLAYLIST_TRACK = "playlist.addSongs"
+METHOD_REMOVE_PLAYLIST_TRACK = "playlist.deleteSongs"
 
 PRIVATE_API_URL = "https://www.deezer.com/ajax/gw-light.php"
 GET_MEDIA_URL = "https://media.deezer.com/v1/get_url"
@@ -49,6 +52,16 @@ GRAPHQL_REMOVE_ALBUM_FAVORITE = (
 GRAPHQL_SEARCH = (
     "SearchFull",
     "query SearchFull($query: String!, $firstGrid: Int!, $firstList: Int!, $includeRelatedContent: Boolean!, $channelPlaylistFirst: Int!) { instantSearch(query: $query) { bestResult { __typename ... on InstantSearchAlbumBestResult { album { ...SearchAlbum __typename } __typename } ... on InstantSearchArtistBestResult { artist { ...BestResultArtist __typename } relatedContent @include(if: $includeRelatedContent) { ...RelatedContentArtist __typename } __typename } ... on InstantSearchPlaylistBestResult { playlist { ...SearchPlaylist __typename } __typename } ... on InstantSearchPodcastBestResult { podcast { ...SearchPodcast __typename } __typename } ... on InstantSearchLivestreamBestResult { livestream { ...SearchLivestream __typename } __typename } ... on InstantSearchTrackBestResult { foundByLyrics track { ...TableTrack __typename } __typename } ... on InstantSearchPodcastEpisodeBestResult { podcastEpisode { ...SearchPodcastEpisode __typename } __typename } ... on InstantSearchFlowConfigBestResult { flowConfig { ...SearchFlowConfig __typename } __typename } ... on InstantSearchChannelBestResult { channel { ...SearchChannel __typename } relatedContent { ...ChannelBestResultRelatedContent __typename } __typename } } results { artists(first: $firstGrid) { edges { node { ...SearchArtist __typename } __typename } pageInfo { endCursor __typename } priority __typename } albums(first: $firstGrid) { edges { node { ...SearchAlbum __typename } __typename } pageInfo { endCursor __typename } priority __typename } channels(first: $firstGrid) { edges { node { ...SearchChannel __typename } __typename } pageInfo { endCursor __typename } priority __typename } flowConfigs(first: $firstGrid) { edges { node { ...SearchFlowConfig __typename } __typename } pageInfo { endCursor __typename } priority __typename } livestreams(first: $firstGrid) { edges { node { ...SearchLivestream __typename } __typename } pageInfo { endCursor __typename } priority __typename } playlists(first: $firstGrid) { edges { node { ...SearchPlaylist __typename } __typename } pageInfo { endCursor __typename } priority __typename } podcasts(first: $firstGrid) { edges { node { ...SearchPodcast __typename } __typename } pageInfo { endCursor __typename } priority __typename } tracks(first: $firstList) { edges { node { ...TableTrack __typename } __typename } pageInfo { endCursor __typename } priority __typename } users(first: $firstGrid) { edges { node { ...SearchUser __typename } __typename } pageInfo { endCursor __typename } priority __typename } podcastEpisodes(first: $firstList) { edges { node { ...SearchPodcastEpisode __typename } __typename } pageInfo { endCursor __typename } priority __typename } __typename } __typename } }  fragment SearchAlbum on Album { id displayTitle isFavorite releaseDateAlbum: releaseDate isExplicitAlbum: isExplicit cover { ...PictureLarge __typename } contributors { edges { roles node { ... on Artist { id name __typename } __typename } __typename } __typename } tracksCount __typename }  fragment PictureLarge on Picture { id large: urls(pictureRequest: {width: 500, height: 500}) explicitStatus __typename }  fragment BestResultArtist on Artist { ...SearchArtist hasSmartRadio hasTopTracks __typename }  fragment SearchArtist on Artist { id isFavorite name fansCount picture { ...PictureLarge __typename } __typename }  fragment RelatedContentArtist on InstantSearchArtistBestResultRelatedContent { __typename ... on InstantSearchArtistBestResultRelatedContentNewRelease { album { ...BestResultAlbumWithTracks __typename } __typename } ... on InstantSearchArtistBestResultRelatedContentRelevantAlbum { album { ...BestResultAlbumWithTracks __typename } __typename } ... on InstantSearchArtistBestResultRelatedContentTopTracks { tracks { ...TableTrack __typename } __typename } }  fragment BestResultAlbumWithTracks on Album { ...SearchAlbum tracks { edges { node { ...TableTrack __typename } __typename } __typename } __typename }  fragment TableTrack on Track { id title duration popularity isExplicit lyrics { id __typename } media { id rights { ads { available availableAfter __typename } sub { available availableAfter __typename } __typename } __typename } album { id displayTitle cover { ...PictureXSmall ...PictureLarge __typename } __typename } contributors { edges { node { ... on Artist { id name __typename } __typename } __typename } __typename } __typename }  fragment PictureXSmall on Picture { id xxx_small: urls(pictureRequest: {width: 40, height: 40}) explicitStatus __typename }  fragment SearchPlaylist on Playlist { id title isFavorite estimatedTracksCount fansCount isPrivate isCollaborative picture { ...PictureLarge __typename } owner { id name __typename } __typename }  fragment SearchPodcast on Podcast { id displayTitle isPodcastFavorite: isFavorite cover { ...PictureLarge __typename } isExplicit rawEpisodes __typename }  fragment SearchLivestream on Livestream { id name cover { ...PictureLarge __typename } __typename }  fragment SearchPodcastEpisode on PodcastEpisode { id title description duration releaseDate media { url __typename } podcast { id displayTitle isExplicit cover { ...PictureSmall ...PictureLarge __typename } rights { ads { available __typename } sub { available __typename } __typename } __typename } __typename }  fragment PictureSmall on Picture { id small: urls(pictureRequest: {height: 100, width: 100}) explicitStatus __typename }  fragment SearchFlowConfig on FlowConfig { id title visuals { dynamicPageIcon { id large: urls(uiAssetRequest: {width: 500, height: 500}) __typename } __typename } __typename }  fragment SearchChannel on Channel { id picture { ...PictureLarge __typename } logoAsset { id large: urls(uiAssetRequest: {width: 500, height: 0}) __typename } name slug url { webUrl __typename } backgroundColor __typename }  fragment ChannelBestResultRelatedContent on InstantSearchChannelBestResultRelatedContent { flowConfig { ...SearchFlowConfig __typename } playlists(first: $channelPlaylistFirst) { edges { node { ...SearchPlaylist __typename } __typename } __typename } __typename }  fragment SearchUser on User { id name picture { ...PictureLarge __typename } __typename }",
+)
+
+GRAPHQL_CREATE_PLAYLIST = (
+    "CreatePlaylist",
+    "mutation CreatePlaylist($input: PlaylistCreateMutationInput!) { createPlaylist(input: $input) { playlist { id title description isPrivate isCollaborative picture { id } } } }",
+)
+
+GRAPHQL_EDIT_PLAYLIST = (
+    "UpdatePlaylist",
+    "mutation UpdatePlaylist($input: PlaylistUpdateMutationInput!) { updatePlaylist(input: $input) { playlist { id title description isPrivate isCollaborative picture { id } } } }",
 )
 
 
@@ -196,6 +209,10 @@ class DeezerAPI:
             else:
                 raise Exception("GraphQL request failed. Unknown JSON Error")
 
+        #check if theres data before trying to access it
+        if "data" not in response_json:
+            raise Exception(f"GraphQL response missing 'data' field: {response_json}")
+
         return response_json["data"]
 
     def get_user_data(self):
@@ -246,12 +263,137 @@ class DeezerAPI:
         data = self._get_api(METHOD_GET_PLAYLIST_DATA, json_data)
 
         return data
+    
+    def create_playlist(self, title:str, description:Optional[str] = None, is_private: bool=False, is_collaborative: bool=False) -> str:
+        """
+        Create a new playlist. Returns the playlist ID. Playlist cannot be both private and collaborative.
+        
+        :param title: The title of the playlist
+        :type title: str
+        :param description: Description for the playlist
+        :type description: Optional[str]
+        :param is_private: Whether the playlist should be private. Default is False (public)
+        :type is_private: bool
+        :param is_collaborative: Whether the playlist should be collaborative. Default is False
+        :type is_collaborative: bool
+        :return: The ID of the created playlist
+        :rtype: str
+        """
+
+        variables = {
+            "input": {
+                "title": title,
+                "isPrivate": is_private,
+                "isCollaborative": is_collaborative,
+            }
+        }
+
+        if description:
+            variables["input"]["description"] = description
+
+        if is_private and is_collaborative:
+            raise Exception("A playlist cannot be both private and collaborative")
+        
+        response = self._request_graphql(GRAPHQL_CREATE_PLAYLIST, variables)
+        return response["createPlaylist"]["playlist"]["id"]
+
+    def delete_playlist(self, id: str):
+        """
+        Delete a playlist by ID
+
+        :param id: The ID of the playlist to delete
+        :type id: str
+        """
+        
+        json_data = {"playlist_id": id}
+        self._get_api(METHOD_DELETE_PLAYLIST, json_data)
+
+    def edit_playlist(self, playlist_id:str, title: Optional[str] = None, description: Optional[str] = None, is_private: Optional[bool] = None, is_collaborative: Optional[bool] = None) -> str:
+        """
+        Edit a playlist. Returns the playlist ID. Playlist cannot be both private and collaborative.
+
+        :param playlist_id: The ID of the playlist to edit
+        :type playlist_id: str
+        :param title: The new title of the playlist
+        :type title: Optional[str]
+        :param description: The new description of the playlist
+        :type description: Optional[str]
+        :param is_private: Whether the playlist should be private
+        :type is_private: Optional[bool]
+        :param is_collaborative: Whether the playlist should be collaborative
+        :type is_collaborative: Optional[bool]
+        :return: The ID of the edited playlist
+        :rtype: str
+        """
+
+        variables = {
+            "input": {
+                "playlistId": playlist_id,
+            }
+        }
+
+        if title is not None:
+            variables["input"]["title"] = title
+        if description is not None:
+            variables["input"]["description"] = description
+        if is_private is not None:
+            variables["input"]["isPrivate"] = is_private
+        if is_collaborative is not None:
+            variables["input"]["isCollaborative"] = is_collaborative
+
+        if is_private and is_collaborative: #bcz not possible by Deezer and clearly illogical
+            raise Exception("A playlist cannot be both private and collaborative")
+        
+        response = self._request_graphql(GRAPHQL_EDIT_PLAYLIST, variables)
+        return response["updatePlaylist"]["playlist"]["id"]
 
     def get_track_batch_data(self, ids: Iterable[str]):
         json_data = {"sng_ids": tuple(ids)}
         data = self._get_api(METHOD_GET_BATCH_TRACK_DATA, json_data)
 
         return data
+    
+    def add_tracks_to_playlist(self, playlist_id: str, song_ids:ArrayLike[str],offset: int = -1) -> None:
+        """
+        Add songs to a playlist.
+
+        :param playlist_id: The ID of the playlist to add songs to
+        :type playlist_id: str
+        :param song_ids: A list of song IDs to add to the playlist
+        :type song_ids: ArrayLike[str]
+        :param offset: The position to insert the songs at. Default is -1 (add to end of playlist)
+        :type offset: int
+        """
+
+        # Convert song IDs to [id, position] format
+        songs = [[str(song_id), i] for i, song_id in enumerate(song_ids)]
+        
+        json_data = {
+            "playlist_id": playlist_id,
+            "songs": songs,
+            "offset": offset,
+        }
+        
+        self._get_api(METHOD_ADD_PLAYLIST_TRACK, json_data)
+
+    def remove_tracks_from_playlist(self, playlist_id: str,song_ids: ArrayLike[str]) -> None:
+        """
+        Remove songs from a playlist.
+
+        :param playlist_id: The ID of the playlist to remove songs from
+        :type playlist_id: str
+        :param song_ids: A list of song IDs to remove from the playlist
+        :type song_ids: ArrayLike[str]
+        """
+    
+        songs = [[int(song_id), i] for i, song_id in enumerate(song_ids)] #convert song IDs to [id, position] format (as integers)
+        
+        json_data = {
+            "playlist_id": playlist_id,
+            "songs": songs,
+        }
+        
+        self._get_api(METHOD_REMOVE_PLAYLIST_TRACK, json_data)
 
     def get_media_data(
         self, track_token: str, quality: QualityType
