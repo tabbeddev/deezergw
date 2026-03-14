@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from deezergw.api import IMAGE_URL, DeezerAPI
 from deezergw.exceptions import UnknownException
 from deezergw.resources.track import Track
+from deezergw.utils import normalize_track_ids
 
 
 class Playlist:
@@ -81,6 +82,34 @@ class Playlist:
         if not self._author_pic:
             return
         return IMAGE_URL.format("user", self._author_pic, size, size)
+    
+    def add_tracks(self, tracks: List[Union[str, Track]], offset: int = -1):
+        """
+        Add tracks to this playlist.
+
+        :param tracks: A list of Tracks or track ids to add to the playlist
+        :type tracks: List[Union[str, Track]]
+        :param offset: The position to insert the songs at. Default is -1 (add to end of playlist)
+        :type offset: int
+        """
+        
+        ids = normalize_track_ids(tracks)
+        self._api.add_tracks_to_playlist(self.id, ids, offset)
+        self._api.delete_playlist
+ 
+    def remove_tracks(self, tracks: List[Union[str, Track]]):
+        """
+        Remove tracks from this playlist.
+
+        :param tracks: A list of Tracks or track ids to remove from the playlist
+        :type tracks: List[Union[str, Track]]
+        """
+        ids = normalize_track_ids(tracks)
+        self._api.remove_tracks_from_playlist(self.id, ids)
+
+    def delete(self):
+        """Delete this playlist. Use with care!"""
+        self._api.delete_playlist(self.id)
 
     def __repr__(self) -> str:
         return f'<Deezer - Playlist: "{self.name}" by "{self.author_name}">'
