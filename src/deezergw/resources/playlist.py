@@ -48,11 +48,11 @@ class Playlist:
         )
         self._playlist_pic: str = data["PLAYLIST_PICTURE"]
 
-        self.songs = (
-            tuple(
+        self.songs: Optional[List[Track]] = (
+            [
                 Track(metadata, api, favorite_tracks)
                 for metadata in playlist_metadata["SONGS"]["data"]
-            )
+            ]
             if "SONGS" in playlist_metadata
             else None
         )
@@ -83,7 +83,7 @@ class Playlist:
             return
         return IMAGE_URL.format("user", self._author_pic, size, size)
     
-    def add_tracks(self, tracks: List[Union[str, Track]], offset: int = -1):
+    def add_tracks(self, tracks: List[Track], offset: int = -1):
         """
         Add tracks to this playlist.
 
@@ -92,12 +92,21 @@ class Playlist:
         :param offset: The position to insert the songs at. Default is -1 (add to end of playlist)
         :type offset: int
         """
-        
         ids = normalize_track_ids(tracks)
         self._api.add_tracks_to_playlist(self.id, ids, offset)
-        self._api.delete_playlist
+
+        if not self.songs:
+            self.songs = []
+        self.songs += tracks
+
+        if not self.duration:
+            self.duration = 0
+        for track in tracks:
+            self.duration += track.duration
+
+        self.last_edited = datetime.now()
  
-    def remove_tracks(self, tracks: List[Union[str, Track]]):
+    def remove_tracks(self, tracks: List[Track]):
         """
         Remove tracks from this playlist.
 
@@ -106,6 +115,17 @@ class Playlist:
         """
         ids = normalize_track_ids(tracks)
         self._api.remove_tracks_from_playlist(self.id, ids)
+
+        if self.songs:
+            for song in self.songs:
+                if song.id in ids:
+                    self.songs.remove(song)
+
+        if self.duration:
+            for track in tracks:
+                self.duration -= track.duration
+        
+        self.last_edited = datetime.now()
 
     def delete(self):
         """Delete this playlist. Use with care!"""
