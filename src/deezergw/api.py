@@ -169,7 +169,7 @@ class DeezerAPI:
                 return self._get_api(method, json_data, retries)
             else:
                 # Catch any unknown error
-                print("[!] UNKOWN ERROR was receivedby DeezerGW. PLEASE REPORT IT!")
+                print("[!] An unknown error was received by DeezerGW. Please report it")
                 print("[ ] JSON-Data:")
                 print(response.json())
 
