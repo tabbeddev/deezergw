@@ -37,3 +37,11 @@ class DownloadInfo(TypedDict):
     quality: QualityType
     file_format: FormatType
     track_id: str
+
+
+class PlaylistState(TypedDict):
+    isPrivate: bool
+    isCollaborative: bool
+
+_array = TypeVar("_array")
+ArrayLike = Union[List[_array], Tuple[_array, ...], Set[_array]]

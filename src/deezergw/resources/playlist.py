@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from deezergw.api import IMAGE_URL, DeezerAPI
-from deezergw.exceptions import UnknownException
+from deezergw.exceptions import UnauthorizedException, UnknownException
 from deezergw.resources.track import Track
 from deezergw.utils import normalize_track_ids
 
@@ -40,6 +40,11 @@ class Playlist:
             if "DATA_MOD" in data
             else None
         )
+        self.editable: bool = data["STATUS"] == 1
+
+        state = api.get_playlist_state(self.id)
+        self.is_private = state["isPrivate"]
+        self.is_collaborative = state["isCollaborative"]
 
         self._author_pic: Optional[str] = (
             data["PARENT_USER_PICTURE"]
@@ -92,6 +97,9 @@ class Playlist:
         :param offset: The position to insert the songs at. Default is -1 (add to end of playlist)
         :type offset: int
         """
+        if not self.editable:
+            raise UnauthorizedException("This playlist doesn't seem editable")
+
         ids = normalize_track_ids(tracks)
         self._api.add_tracks_to_playlist(self.id, ids, offset)
 
@@ -113,6 +121,9 @@ class Playlist:
         :param tracks: A list of Tracks or track ids to remove from the playlist
         :type tracks: List[Union[str, Track]]
         """
+        if not self.editable:
+            raise UnauthorizedException("This playlist doesn't seem editable")
+
         ids = normalize_track_ids(tracks)
         self._api.remove_tracks_from_playlist(self.id, ids)
 
@@ -126,6 +137,30 @@ class Playlist:
                 self.duration -= track.duration
         
         self.last_edited = datetime.now()
+
+    def edit_playlist(self, name: Optional[str] = None, description: Optional[str] = None, is_private: Optional[bool] = None, is_collaborative: Optional[bool] = None):
+        """
+        Edit a playlist. Returns the playlist ID. Playlist cannot be both private and collaborative.
+
+        :param name: The new name of the playlist
+        :type name: Optional[str]
+        :param description: The new description of the playlist
+        :type description: Optional[str]
+        :param is_private: Whether the playlist should be private
+        :type is_private: Optional[bool]
+        :param is_collaborative: Whether the playlist should be collaborative
+        :type is_collaborative: Optional[bool]
+        """
+        self._api.edit_playlist(self.id, name, description, is_private, is_collaborative)
+        if name:
+            self.name = name
+        if description:
+            self.description = description
+        if is_private is not None:
+            self.is_private = is_private
+        if is_collaborative is not None:
+            self.is_collaborative = is_collaborative
+
 
     def delete(self):
         """Delete this playlist. Use with care!"""

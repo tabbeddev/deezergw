@@ -1,9 +1,9 @@
 from datetime import datetime
 from requests import Session
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
-from deezergw.exceptions import NoRightOnMedia, NotFoundException, UnauthorizedException
+from typing import Any, Dict, Optional, Tuple, Union
+from deezergw.exceptions import AlreadyExistsError, NotFoundException, RequestSpecificError, UnauthorizedException, UnknownException
 from deezergw.globals import Qualities, QualityType
-from deezergw.types import LoginDumpData, MediaData
+from deezergw.types import LoginDumpData, MediaData, PlaylistState, ArrayLike
 
 METHOD_GET_USER_DATA = "deezer.getUserData"
 METHOD_GET_USER_PROFILE = "deezer.pageProfile"
@@ -63,6 +63,7 @@ GRAPHQL_EDIT_PLAYLIST = (
     "UpdatePlaylist",
     "mutation UpdatePlaylist($input: PlaylistUpdateMutationInput!) { updatePlaylist(input: $input) { playlist { id title description isPrivate isCollaborative picture { id } } } }",
 )
+GRAPHQL_GET_PLAYLIST_STATE = ("PlaylistState","query PlaylistState($playlistId: String!) { playlist(playlistId: $playlistId) { isPrivate isCollaborative } }")
 
 
 class DeezerAPI:
@@ -167,19 +168,14 @@ class DeezerAPI:
                 retries -= 1
                 self._refresh_token()
                 return self._get_api(method, json_data, retries)
+            elif "ERROR_DATA_EXISTS" in error_data:
+                raise AlreadyExistsError(error_data["ERROR_DATA_EXISTS"])
             else:
-                # Catch any unknown error
-                print("[!] An unknown error was received by DeezerGW. Please report it")
-                print("[ ] JSON-Data:")
-                print(response.json())
+                # Any other error is up to the specific function to handle
 
-                if retries <= 0:
-                    raise Exception("Results are empty")
-
-                print(f"Retrying ({retries} tries left) ...")
-                retries -= 1
-                self._refresh_token()
-                return self._get_api(method, json_data, retries=retries)
+                error_type: str = tuple(error_data.keys())[0]
+                error_msg: str = error_data[error_type]
+                raise RequestSpecificError(error_type, error_msg)
 
         return results
 
@@ -206,7 +202,10 @@ class DeezerAPI:
                 print("Refreshing JWT Token...")
                 self._refresh_jwt_token()
                 return self._request_graphql(query_pair, variables)
+            elif response_json["errors"][0]["type"] == "PlaylistMutationFailedException":
+                raise UnauthorizedException(response_json["errors"][0]["message"])
             else:
+                print(response_json)
                 raise Exception("GraphQL request failed. Unknown JSON Error")
 
         #check if theres data before trying to access it
@@ -263,6 +262,12 @@ class DeezerAPI:
         data = self._get_api(METHOD_GET_PLAYLIST_DATA, json_data)
 
         return data
+    
+    def get_playlist_state(self, id: Union[str, int]) -> PlaylistState:
+        variables = {"playlistId": str(id)}
+        response = self._request_graphql(GRAPHQL_GET_PLAYLIST_STATE, variables)
+
+        return response["playlist"]
     
     def create_playlist(self, title:str, description:Optional[str] = None, is_private: bool=False, is_collaborative: bool=False) -> str:
         """
@@ -347,13 +352,13 @@ class DeezerAPI:
         response = self._request_graphql(GRAPHQL_EDIT_PLAYLIST, variables)
         return response["updatePlaylist"]["playlist"]["id"]
 
-    def get_track_batch_data(self, ids: Iterable[str]):
+    def get_track_batch_data(self, ids: ArrayLike[str]):
         json_data = {"sng_ids": tuple(ids)}
         data = self._get_api(METHOD_GET_BATCH_TRACK_DATA, json_data)
 
         return data
     
-    def add_tracks_to_playlist(self, playlist_id: str, song_ids: Iterable[str],offset: int = -1) -> None:
+    def add_tracks_to_playlist(self, playlist_id: str, song_ids: ArrayLike[str],offset: int = -1) -> None:
         """
         Add songs to a playlist.
 
@@ -365,6 +370,9 @@ class DeezerAPI:
         :type offset: int
         """
 
+        if len(song_ids) == 0:
+            return
+
         # Convert song IDs to [id, position] format
         songs = [[str(song_id), i] for i, song_id in enumerate(song_ids)]
         
@@ -373,10 +381,16 @@ class DeezerAPI:
             "songs": songs,
             "offset": offset,
         }
-        
-        self._get_api(METHOD_ADD_PLAYLIST_TRACK, json_data)
 
-    def remove_tracks_from_playlist(self, playlist_id: str,song_ids: Iterable[str]) -> None:
+        try: 
+            self._get_api(METHOD_ADD_PLAYLIST_TRACK, json_data)
+        except RequestSpecificError as e:
+            if e.error_type == "REQUEST_ERROR":
+                raise UnauthorizedException(e.error_msg)
+            else:
+                raise e
+
+    def remove_tracks_from_playlist(self, playlist_id: str,song_ids: ArrayLike[str]) -> None:
         """
         Remove songs from a playlist.
 
@@ -385,6 +399,9 @@ class DeezerAPI:
         :param song_ids: A list of song IDs to remove from the playlist
         :type song_ids: ArrayLike[str]
         """
+
+        if len(song_ids) == 0:
+            return
     
         songs = [[int(song_id), i] for i, song_id in enumerate(song_ids)] #convert song IDs to [id, position] format (as integers)
         
@@ -422,7 +439,7 @@ class DeezerAPI:
         infos = response.json()["data"][0]
 
         if "errors" in infos:
-            raise NoRightOnMedia(infos["errors"][0]["message"])
+            raise UnauthorizedException(infos["errors"][0]["message"])
 
         return infos["media"][0]
 
@@ -451,7 +468,7 @@ class DeezerAPI:
 
         return favorited_tracks
 
-    def add_favorite_tracks(self, ids: Iterable[str]):
+    def add_favorite_tracks(self, ids: ArrayLike[str]):
         now = datetime.now()
 
         json_data = {"IDS": tuple(ids)}
@@ -460,7 +477,7 @@ class DeezerAPI:
         for id in ids:
             self.favorited_ids[id] = now
 
-    def remove_favorite_tracks(self, ids: Iterable[str]):
+    def remove_favorite_tracks(self, ids: ArrayLike[str]):
         json_data = {"IDS": tuple(ids)}
         self._get_api(METHOD_REMOVE_FAVORITE_TRACKS, json_data)
 

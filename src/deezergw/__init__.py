@@ -1,6 +1,6 @@
 import json as _json
 from os import PathLike
-from typing import Any, Generator, Iterable, List, Optional, Union
+from typing import Any, Generator, List, Optional, Union
 from deezergw.api import DeezerAPI
 from deezergw import decrypt_utils as _decrypt_utils
 from deezergw.resources.album import Album
@@ -12,7 +12,7 @@ from deezergw.search_resources.artist import SearchArtist
 from deezergw.search_resources.playlist import SearchPlaylist
 from deezergw.search_resources.results import SearchResults
 from deezergw.search_resources.track import SearchTrack
-from deezergw.types import LoginDumpData
+from deezergw.types import LoginDumpData, ArrayLike
 
 
 class Client:
@@ -192,12 +192,12 @@ class Client:
 
     # Batch functions
 
-    def get_tracks(self, ids: Iterable[str]):
+    def get_tracks(self, ids: ArrayLike[str]):
         """
         Get multiple Track objects by there ids.
 
         :param ids: The track ids in some form of a list
-        :type ids: Iterable[str]
+        :type ids: ArrayLike[str]
         :return: A list of the Tracks
         :rtype: List[Track]
         """
