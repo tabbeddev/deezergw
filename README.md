@@ -24,7 +24,8 @@ pip install deezergw
 
 - Get info of tracks, albums, artists and playlists by the ID
 - Search for tracks, albums, artists and playlists
-- Manage favorite tracks, albums, artists and playlists
+- (Un)favorite tracks, albums, artists and playlists
+- Manage playlists
 - Download tracks (ID3 support currently missing) as a MP3 (128 or 320) or FLAC
 - Fully type safe
 - Python >= 3.8
@@ -59,7 +60,7 @@ print(track.album_name)
 # Download the track
 encrypted_data, info = track.download_encrypted()
 decrypted_data = deezergw.decrypt_audio(encrypted_data, track.id) # or info["track_id"]
-save_decrypted(decrypted_data, "filename." + info["file_format"])
+deezergw.save_decrypted(decrypted_data, "filename." + info["file_format"])
 
 # Search
 results = new_client.search("C418 Alpha")
