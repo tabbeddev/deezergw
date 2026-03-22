@@ -201,7 +201,7 @@ class DeezerAPI:
             )
 
         response_json = response.json()
-        if "errors" in response_json and not any(response_json["data"].values()):
+        if "errors" in response_json and ("data" not in response_json or response_json["data"] is None or not any(response_json["data"].values())):
             if response_json["errors"][0]["type"] == "JwtTokenExpiredError":
                 print("Refreshing JWT Token...")
                 self._refresh_jwt_token()
