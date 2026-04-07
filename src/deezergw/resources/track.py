@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, cast
 from datetime import datetime
 from deezergw.exceptions import ExpiredException
 from deezergw.globals import Qualities, QualityType, StockQuality
@@ -93,7 +93,7 @@ class Track:
             for key, value in self._filesizes.items():
                 if value == self._default_filesize:
                     print(f"Selected {key} as fallback.")
-                    quality = key  # pyright: ignore[reportAssignmentType]
+                    quality = cast(QualityType, key)
                     break
 
         media_data = self._api.get_media_data(self._track_token, quality)

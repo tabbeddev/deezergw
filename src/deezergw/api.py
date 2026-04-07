@@ -1,7 +1,7 @@
 from datetime import datetime
 from requests import Session
 from typing import Any, Dict, Optional, Tuple, Union
-from deezergw.exceptions import AlreadyExistsError, NotFoundException, RequestSpecificError, UnauthorizedException, UnknownException
+from deezergw.exceptions import AlreadyExistsError, NotFoundException, RequestSpecificError, ResponseException, UnauthorizedException, UnknownException
 from deezergw.globals import Qualities, QualityType
 from deezergw.types import LoginDumpData, MediaData, PlaylistState, ArrayLike
 
@@ -191,12 +191,14 @@ class DeezerAPI:
             "https://pipe.deezer.com/api", json=json
         )
 
+        response_json = response.json()
+
         if response.status_code != 200:
-            raise Exception(
-                "GraphQL request failed. Status " + str(response.status_code)
+            raise ResponseException(
+                "GraphQL request failed. Status " + str(response.status_code),
+                response_json
             )
 
-        response_json = response.json()
         if "errors" in response_json and ("data" not in response_json or response_json["data"] is None or not any(response_json["data"].values())):
             if response_json["errors"][0]["type"] == "JwtTokenExpiredError":
                 print("Refreshing JWT Token...")
@@ -205,12 +207,11 @@ class DeezerAPI:
             elif response_json["errors"][0]["type"] == "PlaylistMutationFailedException":
                 raise UnauthorizedException(response_json["errors"][0]["message"])
             else:
-                print(response_json)
-                raise Exception("GraphQL request failed. Unknown JSON Error")
+                raise ResponseException("GraphQL request failed. Unknown JSON Error", response_json)
 
         #check if theres data before trying to access it
         if "data" not in response_json:
-            raise Exception(f"GraphQL response missing 'data' field: {response_json}")
+            raise ResponseException(f"GraphQL response missing 'data' field", response_json)
 
         return response_json["data"]
 

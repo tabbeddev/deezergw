@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class ExpiredException(Exception):
     pass
 
@@ -20,3 +23,9 @@ class RequestSpecificError(Exception):
 
         self.msg = f"{error_type} - {error_msg}"
         super().__init__(self.msg)
+
+class ResponseException(Exception):
+    def __init__(self, msg: str, data: Any) -> None:
+        self.data = data
+        self.msg = msg
+        super().__init__(msg + " (Response Data can be accesed with exception.data)")

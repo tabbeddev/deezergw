@@ -2,5 +2,5 @@ __pycache__
 /test_data
 /dist
 /venv
-deezergw.egg-info
+*.egg-info
 login_dump.dat
