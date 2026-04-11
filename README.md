@@ -60,7 +60,12 @@ print(track.album_name)
 # Download the track
 encrypted_data, info = track.download_encrypted()
 decrypted_data = deezergw.decrypt_audio(encrypted_data, track.id) # or info["track_id"]
-deezergw.save_decrypted(decrypted_data, "filename." + info["file_format"])
+deezergw.save_decrypted(decrypted_data, "filename." + info["file_format"]) # Save with no metadata
+
+# Metadata
+metadata_track = deezergw.add_metadata(decrypted_data, info)
+with open("metadata." + info["file_format"], "wb") as f:
+    f.write(metadata_track)
 
 # Search
 results = new_client.search("C418 Alpha")
