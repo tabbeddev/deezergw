@@ -1,15 +1,13 @@
 from typing import Any, Dict, Optional, Tuple, Union, cast
 from datetime import datetime
 from deezergw.exceptions import ExpiredException
-from deezergw.globals import Qualities, QualityType, StockQuality
+from deezergw.globals import FormatType, Qualities, QualityType, StockQuality
 from deezergw.api import IMAGE_URL, DeezerAPI
 from deezergw.types import DownloadInfo
 
 
 def _get_filesizes(track_metadata: Any):
-    all_size_keys = list(
-        filter(lambda x: x.startswith("FILESIZE_"), track_metadata)
-    )
+    all_size_keys = list(filter(lambda x: x.startswith("FILESIZE_"), track_metadata))
 
     sizes: Dict[str, int] = {}
 
@@ -105,10 +103,20 @@ class Track:
 
         sel_quality = Qualities[quality]
 
+        cover = self._api.session.get(self.cover_url(512))
+
         info: DownloadInfo = {
             "file_format": sel_quality["f_format"],
             "quality": quality,
             "track_id": self.id,
+            "album": self.album_name,
+            "artist": self.artist_name,
+            "duration": str(self.duration * 1000),
+            "pic_content": cover.content,
+            "release_date": (
+                self.release_date.isoformat() if self.release_date else None
+            ),
+            "title": self.title,
         }
 
         return crypted_audio.content, info

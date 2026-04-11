@@ -37,7 +37,7 @@ def blowfish_decrypt(data: bytes, key: str):
 # State Encryption
 
 
-def encrypt(data: str, key: str):
+def encrypt(data: str, key: str) -> bytes:
     hmac = HMAC.new(HMAC_KEY + key.encode(), digestmod=SHA256)
     cipher = AES.new(AES_KEY, AES.MODE_CTR)
 
@@ -47,7 +47,7 @@ def encrypt(data: str, key: str):
     return tag + cipher.nonce + ciphertext
 
 
-def decrypt(data: bytes, key: str):
+def decrypt(data: bytes, key: str) -> str:
     tag = data[0:32]
     nonce = data[32:40]
     ciphertext = data[40:]

@@ -1,4 +1,4 @@
-from typing import List, Literal, TypeVar, TypedDict, Tuple, Set, Union
+from typing import List, Literal, Optional, TypeVar, TypedDict, Tuple, Set, Union
 from deezergw.globals import FormatType, QualityType
 
 
@@ -37,6 +37,12 @@ class DownloadInfo(TypedDict):
     quality: QualityType
     file_format: FormatType
     track_id: str
+    title: str
+    album: str
+    duration: str
+    artist: str
+    pic_content: bytes
+    release_date: Optional[str]
 
 
 class PlaylistState(TypedDict):

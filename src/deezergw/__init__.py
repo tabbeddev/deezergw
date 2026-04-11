@@ -1,6 +1,11 @@
 import json as _json
+from io import BytesIO
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3
+from mutagen.id3._frames import TIT2, TLEN, TALB, TPE1, TDRC, APIC
+from mutagen.flac import FLAC, Picture
 from os import PathLike
-from typing import Any, Generator, List, Optional, Union
+from typing import Any, Generator, List, Optional, Union, cast
 from deezergw.api import DeezerAPI
 from deezergw import decrypt_utils as _decrypt_utils
 from deezergw.resources.album import Album
@@ -12,7 +17,7 @@ from deezergw.search_resources.artist import SearchArtist
 from deezergw.search_resources.playlist import SearchPlaylist
 from deezergw.search_resources.results import SearchResults
 from deezergw.search_resources.track import SearchTrack
-from deezergw.types import LoginDumpData, ArrayLike
+from deezergw.types import DownloadInfo, LoginDumpData, ArrayLike
 
 
 class Client:
@@ -33,10 +38,12 @@ class Client:
         :type logindump: Optional[bytes]
         """
         if type(arl) == bytes:
-            raise ValueError("The specified arl is a byte array. Did you ment to specify a logindump?")
+            raise ValueError(
+                "The specified arl is a byte array. Did you ment to specify a logindump?"
+            )
         elif arl and type(arl) != str:
             raise ValueError("The specified arl is not a string")
-        
+
         self._key = key
 
         if arl:
@@ -99,7 +106,7 @@ class Client:
 
     def get_track(self, id: Union[str, int]):
         """
-        Gets the data of a single track by its id. 
+        Gets the data of a single track by its id.
 
         :param id: The track id
         :type id: Union[str, int]
@@ -111,7 +118,7 @@ class Client:
 
     def get_album(self, id: Union[str, int]):
         """
-        Gets the data of a single album by its id. 
+        Gets the data of a single album by its id.
 
         :param id: The album id
         :type id: Union[str, int]
@@ -124,7 +131,7 @@ class Client:
 
     def get_artist(self, id: Union[str, int]):
         """
-        Gets the data of a single artist by its id. 
+        Gets the data of a single artist by its id.
 
         :param id: The artist id
         :type id: Union[str, int]
@@ -137,7 +144,7 @@ class Client:
 
     def get_playlist(self, id: Union[str, int], start_offset: int = 0):
         """
-        Gets the data of a single playlist by its id. 
+        Gets the data of a single playlist by its id.
 
         :param id: The playlist id
         :type id: Union[str, int]
@@ -162,9 +169,7 @@ class Client:
         return_data = SearchResults(query, [], [], [], [])
 
         for album_metadata in results["albums"]["edges"]:
-            album = SearchAlbum(
-                album_metadata["node"], self._api, self.get_album
-            )
+            album = SearchAlbum(album_metadata["node"], self._api, self.get_album)
             return_data.albums.append(album)
 
         for track_metadata in results["tracks"]["edges"]:
@@ -177,9 +182,7 @@ class Client:
             return_data.tracks.append(track)
 
         for artist_metadata in results["artists"]["edges"]:
-            artist = SearchArtist(
-                artist_metadata["node"], self._api, self.get_artist
-            )
+            artist = SearchArtist(artist_metadata["node"], self._api, self.get_artist)
             return_data.artists.append(artist)
 
         for playlist_metadata in results["playlists"]["edges"]:
@@ -238,10 +241,8 @@ class Client:
         """
         if not self._api.user_id:
             raise Exception("UserID was not obtained")
-        
-        metadatas = self._api.get_profile_page_tab(
-            "artists", self._api.user_id
-        )
+
+        metadatas = self._api.get_profile_page_tab("artists", self._api.user_id)
         artists: List[Artist] = []
         for metadata in metadatas["TAB"]["artists"]["data"]:
             artists.append(
@@ -258,15 +259,11 @@ class Client:
         """
         if not self._api.user_id:
             raise Exception("UserID was not obtained")
-        metadatas = self._api.get_profile_page_tab(
-            "playlists", self._api.user_id
-        )
+        metadatas = self._api.get_profile_page_tab("playlists", self._api.user_id)
         playlists: List[Playlist] = []
         for metadata in metadatas["TAB"]["playlists"]["data"]:
             playlists.append(
-                Playlist(
-                    {"DATA": metadata}, self._api, self.favorited_ids, True
-                )
+                Playlist({"DATA": metadata}, self._api, self.favorited_ids, True)
             )
         return playlists
 
@@ -304,3 +301,68 @@ def save_decrypted(
     """
     with open(path, "wb") as f:
         f.writelines(decrypted_audio)
+
+
+def add_metadata(
+    decrypted_audio: Generator[bytes, Any, None], download_info: DownloadInfo
+) -> bytes:
+    """
+    Adds ID3 or FLAC metadata to a decrypted track
+
+    :param decrypted_audio: The decrypted audio (generated by decrypt_audio())
+    :type decrypted_audio: Generator[bytes, Any, None]
+    :param download_info: Additional info about the downloaded track
+    :type download_info: DownloadInfo
+    :return: The decrypted track with metadata
+    :rtype: bytes
+    """
+    decrypted_bytes = b"".join(decrypted_audio)
+    bio = BytesIO(decrypted_bytes)
+
+    if download_info["file_format"] == "mp3":
+        audio = MP3(bio)
+        audio.add_tags()
+
+        id3 = cast(ID3, audio.tags)
+        id3.add(TIT2(encoding=3, text=download_info["title"]))
+        id3.add(TALB(encoding=3, text=download_info["album"]))
+        id3.add(TLEN(encoding=3, text=download_info["duration"]))
+        id3.add(TPE1(encoding=3, text=download_info["artist"]))
+
+        id3.add(
+            APIC(
+                encoding=3,
+                mime="image/jpeg",
+                type=3,
+                desc="Cover",
+                data=download_info["pic_content"],
+            )
+        )
+
+        if download_info["release_date"]:
+            id3.add(TDRC(encoding=3, text=download_info["release_date"]))
+
+        audio.save(bio)
+    elif download_info["file_format"] == "flac":
+        audio = FLAC(bio)
+        audio.add_tags()
+
+        audio["title"] = download_info["title"]
+        audio["album"] = download_info["album"]
+        audio["length"] = download_info["duration"]
+        audio["artist"] = download_info["artist"]
+
+        pic = Picture()
+        pic.type = 3
+        pic.data = download_info["pic_content"]
+        pic.mime = "image/jpeg"
+        pic.desc = "Cover"
+
+        audio.add_picture(pic)
+
+        if download_info["release_date"]:
+            audio["date"] = download_info["release_date"]
+
+        audio.save(bio)
+
+    return bio.getvalue()
