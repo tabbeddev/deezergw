@@ -345,7 +345,6 @@ def add_metadata(
         audio.save(bio)
     elif download_info["file_format"] == "flac":
         audio = FLAC(bio)
-        audio.add_tags()
 
         audio["title"] = download_info["title"]
         audio["album"] = download_info["album"]
@@ -363,6 +362,7 @@ def add_metadata(
         if download_info["release_date"]:
             audio["date"] = download_info["release_date"]
 
+        bio.seek(0)
         audio.save(bio)
 
     return bio.getvalue()
